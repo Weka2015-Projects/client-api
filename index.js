@@ -50,6 +50,25 @@ const players = new Resource('players', {
     this.body = yield { players: this.knex('players') }
   },
 
+  // POST /users
+ create: function *(next) {
+   try {
+     const res = yield this.knex('players').returning('*').insert({
+       username: this.request.body.fields.name,
+       created_at: new Date(),
+       updated_at: new Date()
+     })
+
+     this.type = 'application/json'
+     this.status = 201
+     this.set('Location', `/players/${res[0].id}`)
+     this.body = { players: res.rows[0] }
+   } catch (e) {
+     console.log(e)
+     this.status = 422
+   }
+ },
+
   // GET /player/:id
   show: function *(next) {
     let id = this.params.player
@@ -101,18 +120,21 @@ const games = new Resource('games', {
   }
 })
 
+const options = {
+    origin: 'http://localhost:4005',
+    methods: ['GET', 'POST', 'PATCH']
+}
+
+console.log(options)
+
+app.use(cors(options))
 
 app.use(players.middleware())
 app.use(plays.middleware())
 app.use(games.middleware())
 
 
-const options = {
-    origin: 'http://localhost:4000',
-    methods: ['GET', 'POST', 'PATCH']
-}
 
-app.use(cors(options))
 
 // Start the application up on port PORT
 app.listen(PORT, () => {
