@@ -3,6 +3,7 @@ const koa = require('koa')
 const Resource = require('koa-resource-router')
 const koaBody = require('koa-better-body')
 const knex = require('koa-knex')
+const cors = require('koa-cors')
 const mount = require('koa-mount')
 const sqlite3 = require('sqlite3')
 const path = require('path')
@@ -101,20 +102,19 @@ const games = new Resource('games', {
 })
 
 
-//
-// // GET /games
-// index: function *(next) {
-//   this.body = yield { games: this.knex('games') }
-// },
-
-
 app.use(players.middleware())
 app.use(plays.middleware())
 app.use(games.middleware())
+
+
+const options = {
+    origin: 'http://localhost:4000',
+    methods: ['GET', 'POST', 'PATCH']
+}
+
+app.use(cors(options))
+
 // Start the application up on port PORT
 app.listen(PORT, () => {
   console.log(`Listening on port ${PORT} . . .`)
 })
-
-// GET game request
-// with user/game id/words/other shit
