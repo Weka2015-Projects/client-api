@@ -51,20 +51,66 @@ const players = new Resource('players', {
 
   // GET /player/:id
   show: function *(next) {
-    let id = this.params.players
+    let id = this.params.player
 
-    let res = yield this.knex.raw('select * from users where id = ?', id)
+    let res = yield this.knex.raw('select * from players where id = ?', [id])
 
     if (res.rows.length === 1){
-      this.body = { user: res.rows[0] }
+      this.body = { players: res.rows[0] }
     } else {
       this.status = 404
     }
   }
 })
 
-app.use(players.middleware())
+const plays = new Resource('plays', {
+  // GET /plays
+  index: function *(next) {
+    this.body = yield { plays: this.knex('plays') }
+  },
+  // GET /play/:id
+  show: function *(next) {
+    let id = this.params.play
 
+    let res = yield this.knex.raw('select * from plays where id = ?', [id])
+
+    if (res.rows.length === 1){
+      this.body = { plays: res.rows[0] }
+    } else {
+      this.status = 404
+    }
+  }
+})
+
+const games = new Resource('games', {
+  // GET /games
+  index: function *(next) {
+    this.body = yield { games: this.knex('games') }
+  },
+  // GET /games/:id
+  show: function *(next) {
+    let id = this.params.game
+    let res = yield this.knex.raw('select * from games where id = ?', [id])
+
+    if (res.rows.length === 1){
+      this.body = { games: res.rows[0] }
+    } else {
+      this.status = 404
+    }
+  }
+})
+
+
+//
+// // GET /games
+// index: function *(next) {
+//   this.body = yield { games: this.knex('games') }
+// },
+
+
+app.use(players.middleware())
+app.use(plays.middleware())
+app.use(games.middleware())
 // Start the application up on port PORT
 app.listen(PORT, () => {
   console.log(`Listening on port ${PORT} . . .`)
