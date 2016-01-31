@@ -4,31 +4,29 @@ var koa = require('koa')
 // trust proxy
 app.proxy = true
 
-//sessions
+// sessions
 var session = require('koa-generic-session')
 app.keys = ['your-session-secret']
 app.use(session())
 
-//var sessionCounter = {}
-
-//body parser
+// body parser
 var bodyParser = require('koa-bodyparser')
-app.use(bodyParses())
+app.use(bodyParser())
 
-//authentication
+// authentication
 require('./auth')
-var passort = require('koa-passport')
+var passport = require('koa-passport')
 app.use(passport.initialize())
 app.use(passport.session())
 
-//append view renderer
+// append view renderer
 var views = require('koa-render')
 app.use(views('./views', {
   map: { html: 'handlebars' },
   cache: false
 }))
 
-//public routes
+// public routes
 var Router = require('koa-router')
 
 var public = new Router()
@@ -38,23 +36,24 @@ public.get('/', function*() {
 })
 
 public.post('/custom', function*(next) {
-  var context = this
+  var ctx = this
   yield passport.authenticate('local', function*(err, user, info) {
-    if(err) throw err
+    console.log(user)
+    if (err) throw err
     if (user === false) {
-      context.status = 401
-      context.body = { success: false }
+      ctx.status = 401
+      ctx.body = { success: false }
     } else {
-      yield context.login(user)
-      context.body = { success: true }
+      yield ctx.login(user)
+      ctx.body = { success: true }
     }
   }).call(this, next)
 })
 
-//POST /login
+// POST /login
 public.post('/login',
   passport.authenticate('local', {
-    successRedirect: '/secret',
+    successRedirect: '/app',
     failureRedirect: '/'
   })
 )
@@ -64,9 +63,42 @@ public.get('/logout', function*(next) {
   this.redirect('/')
 })
 
+public.get('/auth/facebook',
+  passport.authenticate('facebook')
+)
+
+public.get('/auth/facebook/callback',
+  passport.authenticate('facebook', {
+    successRedirect: '/app',
+    failureRedirect: '/'
+  })
+)
+
+public.get('/auth/twitter',
+  passport.authenticate('twitter')
+)
+
+public.get('/auth/twitter/callback',
+  passport.authenticate('twitter', {
+    successRedirect: '/app',
+    failureRedirect: '/'
+  })
+)
+
+public.get('/auth/google',
+  passport.authenticate('google')
+)
+
+public.get('/auth/google/callback',
+  passport.authenticate('google', {
+    successRedirect: '/app',
+    failureRedirect: '/'
+  })
+)
+
 app.use(public.middleware())
 
-//Require authentication for now
+// Require authentication for now
 app.use(function*(next) {
   if (this.isAuthenticated()) {
     yield next
@@ -77,16 +109,16 @@ app.use(function*(next) {
 
 var secured = new Router()
 
-secured.get('/secret', function*() {
-  const userId = this.session.passport.user
-  sessionCounter[userId] = sessionCounter[userId] || 0
-  sessionCounter[userId]++
+secured.get('/app', function*() {
+  this.body = yield this.render('app', {userCount:this.req.user.timesLoggedIn})
+})
 
-  this.session.counter = this.session.counter || 0
-  this.session.counter++
+secured.get('/secret', function*() {
   this.body = yield this.render('secret')
 })
 
+
 app.use(secured.middleware())
 
+// start server
 app.listen(process.env.PORT || 3000)
